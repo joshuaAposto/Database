@@ -26,16 +26,16 @@ const writeUserMoney = (data) => {
 };
 
 app.post("/register", (req, res) => {
-  const { userID } = req.body;
+  const { userID, userName } = req.body;
   const usersMoney = readUserMoney();
 
   if (usersMoney[userID]) {
     return res.status(400).json({ error: "User already registered." });
   }
 
-  usersMoney[userID] = 1000;
+  usersMoney[userID] = { balance: 1000, name: userName };
   writeUserMoney(usersMoney);
-  res.json({ userID, balance: usersMoney[userID] });
+  res.json({ userID, balance: usersMoney[userID].balance, name: userName });
 });
 
 const updateUserBalance = (req, res, operation) => {
@@ -52,16 +52,16 @@ const updateUserBalance = (req, res, operation) => {
   }
 
   if (operation === "add") {
-    usersMoney[userID] += parsedAmount;
+    usersMoney[userID].balance += parsedAmount;
   } else {
-    if (usersMoney[userID] < parsedAmount) {
+    if (usersMoney[userID].balance < parsedAmount) {
       return res.status(400).json({ error: "Insufficient funds." });
     }
-    usersMoney[userID] -= parsedAmount;
+    usersMoney[userID].balance -= parsedAmount;
   }
 
   writeUserMoney(usersMoney);
-  res.json({ userID, totalMoney: usersMoney[userID] });
+  res.json({ userID, totalMoney: usersMoney[userID].balance });
 };
 
 app.get("/save-money", (req, res) => updateUserBalance(req, res, "add"));
@@ -71,7 +71,7 @@ app.get("/check-user", (req, res) => {
   const { userID } = req.query;
   const usersMoney = readUserMoney();
   const exists = !!usersMoney[userID];
-  const balance = exists ? usersMoney[userID] : 0;
+  const balance = exists ? usersMoney[userID].balance : 0;
 
   res.json({ exists, balance });
 });
