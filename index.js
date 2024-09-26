@@ -26,17 +26,48 @@ const writeUserMoney = (data) => {
 };
 
 app.post("/register", (req, res) => {
-  const { userID, userName } = req.body;
+  const { userID } = req.body;
   const usersMoney = readUserMoney();
 
   if (usersMoney[userID]) {
     return res.status(400).json({ error: "User already registered." });
   }
 
-  usersMoney[userID] = { balance: 1000, name: userName };
+  usersMoney[userID] = { balance: 1000, banned: false };
   writeUserMoney(usersMoney);
-  res.json({ userID, balance: usersMoney[userID].balance, name: userName });
+  res.json({ userID, balance: usersMoney[userID].balance });
 });
+
+app.post("/manage-user", (req, res) => {
+  const { adminID, userID, action } = req.body;
+  
+  if (adminID !== "100088690249020") {
+    return res.status(403).json({ error: "You are not authorized to perform this action." });
+  }
+
+  const usersMoney = readUserMoney();
+
+  if (!usersMoney[userID]) {
+    return res.status(400).json({ error: "User not found." });
+  }
+
+  if (action === "ban") {
+    usersMoney[userID].banned = true;
+    writeUserMoney(usersMoney);
+    return res.json({ message: `User ${userID} has been banned.` });
+  } else if (action === "unban") {
+    usersMoney[userID].banned = false;
+    writeUserMoney(usersMoney);
+    return res.json({ message: `User ${userID} has been unbanned.` });
+  } else {
+    return res.status(400).json({ error: "Invalid action. Use 'ban' or 'unban'." });
+  }
+});
+
+const checkUserStatus = (userID) => {
+  const usersMoney = readUserMoney();
+  return usersMoney[userID] ? usersMoney[userID].banned : false;
+};
 
 const updateUserBalance = (req, res, operation) => {
   const { userID, amount } = req.query;
@@ -44,6 +75,10 @@ const updateUserBalance = (req, res, operation) => {
 
   if (!usersMoney[userID]) {
     return res.status(400).json({ error: "User not found." });
+  }
+
+  if (checkUserStatus(userID)) {
+    return res.status(403).json({ error: "User is banned." });
   }
 
   const parsedAmount = parseInt(amount, 10);
@@ -71,9 +106,10 @@ app.get("/check-user", (req, res) => {
   const { userID } = req.query;
   const usersMoney = readUserMoney();
   const exists = !!usersMoney[userID];
+  const isBanned = exists && checkUserStatus(userID);
   const balance = exists ? usersMoney[userID].balance : 0;
 
-  res.json({ exists, balance });
+  res.json({ exists, balance, isBanned });
 });
 
 app.listen(PORT, () => {
