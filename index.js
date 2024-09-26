@@ -41,6 +41,15 @@ app.get("/deduct-money", (req, res) => {
   res.json({ totalMoney: users[userID] });
 });
 
+app.get("/check-user", (req, res) => {
+  const { userID } = req.query;
+  const usersMoney = readUserMoney();
+  const exists = !!usersMoney[userID];
+  const balance = exists ? usersMoney[userID] : 0;
+
+  res.json({ exists, balance });
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
